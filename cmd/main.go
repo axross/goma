@@ -3,12 +3,14 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"log"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 
 	"github.com/mitchellh/colorstring"
+
+
+	log "github.com/Sirupsen/logrus"
 )
 type CheckExplain struct {
 	TableName string
@@ -36,11 +38,9 @@ type MySQLExplain struct {
 (2 rows)
  */
 var postgresExplainTemplate = "[red]%s : %s [default]=> %s"
-var mysqlExplainTemplate = "[red]%s : %s [default]=> |  %d | %s      | %s  | %s | %s          | %s | %d    | %s | %d | %s |"
+var mysqlExplainTemplate = "[red]%s : %s [default]=>  %d  %s %s %s %s %s %d %s %d %s "
 
 func main() {
-	log.SetFlags(log.Llongfile)
-
 	// TODO: driverを見て、mysqlとpostgresで分岐
 
 	// TODO: cli引数
@@ -82,7 +82,7 @@ func PrintExplain(db *sql.DB, tableName, queryName, query string) error {
 		return err
 	}
 
-	colorstring.Println(fmt.Sprintf(mysqlExplainTemplate,
+	log.Println(colorstring.Color(fmt.Sprintf(mysqlExplainTemplate,
 		e.TableName,
 		e.QueryName,
 		e.ID,
@@ -95,7 +95,7 @@ func PrintExplain(db *sql.DB, tableName, queryName, query string) error {
 		e.Ref.String,
 		e.Rows.Int64,
 		e.Extra.String,
-	))
+	)))
 
 	return nil
 }
