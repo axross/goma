@@ -17,8 +17,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
 
-	"github.com/kyokomi/goma"
 	"github.com/etgryphon/stringUp"
+	"github.com/kyokomi/goma"
 )
 
 var sampleDataMap = map[reflect.Type]string{
@@ -37,7 +37,7 @@ var driverImports = map[string]string{
 	"postgres": `_ "github.com/lib/pq"`,
 }
 
-func generate(pkg string, opt goma.Options, isSimple bool) {
+func generate(pkg string, opt goma.Options) {
 	log.SetFlags(log.Llongfile)
 
 	currentDir, err := os.Getwd()
@@ -81,14 +81,8 @@ func generate(pkg string, opt goma.Options, isSimple bool) {
 		data := newTemplateData(table, opt)
 
 		// dao template
-		if isSimple {
-			if err := data.execDaoSimpleTemplate(daoRootPath); err != nil {
-				log.Fatalln(err)
-			}
-		} else {
-			if err := data.execDaoTemplate(daoRootPath); err != nil {
-				log.Fatalln(err)
-			}
+		if err := data.execDaoTemplate(daoRootPath); err != nil {
+			log.Fatalln(err)
 		}
 
 		// entity template
@@ -97,41 +91,29 @@ func generate(pkg string, opt goma.Options, isSimple bool) {
 		}
 
 		// sql template
-		if !isSimple {
-			if err := data.Table.execTableTemplate(sqlRootPath); err != nil {
-				log.Fatalln(err)
-			}
+		if err := data.Table.execTableTemplate(sqlRootPath); err != nil {
+			log.Fatalln(err)
 		}
 
 		daoList = append(daoList, data)
 	}
 
 	// asset generate
-	if !isSimple {
-		assetData := AssetTemplateData{}
-		assetData.DaoPkgName = opt.DaoPkgName()
-		if err := assetData.execAssetTemplate(daoRootPath); err != nil {
-			log.Fatalln(err)
-		}
-		if err := assetData.execAssetFileTemplate(daoRootPath); err != nil {
-			log.Fatalln(err)
-		}
-
-		// queryargs generate
-		queryArgsData := QueryArgsTemplateData{}
-		queryArgsData.DaoPkgName = opt.DaoPkgName()
-		queryArgsData.SQLRootDir = opt.SQLRootDir
-		queryArgsData.DriverName = opt.Driver
-		if err := queryArgsData.execQueryArgsTemplate(daoRootPath); err != nil {
-			log.Fatalln(err)
-		}
+	assetData := AssetTemplateData{}
+	assetData.DaoPkgName = opt.DaoPkgName()
+	if err := assetData.execAssetTemplate(daoRootPath); err != nil {
+		log.Fatalln(err)
+	}
+	if err := assetData.execAssetFileTemplate(daoRootPath); err != nil {
+		log.Fatalln(err)
 	}
 
-	// helper generate
-
-	helperData.DaoList = daoList
-
-	if err := helperData.execHelperTemplate(currentDir); err != nil {
+	// queryargs generate
+	queryArgsData := QueryArgsTemplateData{}
+	queryArgsData.DaoPkgName = opt.DaoPkgName()
+	queryArgsData.SQLRootDir = opt.SQLRootDir
+	queryArgsData.DriverName = opt.Driver
+	if err := queryArgsData.execQueryArgsTemplate(daoRootPath); err != nil {
 		log.Fatalln(err)
 	}
 
@@ -190,6 +172,11 @@ func newColumns(columns []*core.Column) []ColumnTemplateData {
 
 		if typeName == "" {
 			typeName = typ.String()
+		}
+
+		// NULL許可ならポインタにする
+		if c.Nullable {
+			typeName = "*" + typeName
 		}
 
 		primaryKey := ""

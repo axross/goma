@@ -11,11 +11,7 @@ import (
 )
 
 func genAction(c *cli.Context) {
-	generate(c.GlobalString("pkg"), scanGenFlags(c), false)
-}
-
-func genSimpleAction(c *cli.Context) {
-	generate(c.GlobalString("pkg"), scanGenFlags(c), true)
+	generate(c.GlobalString("pkg"), scanGenFlags(c))
 }
 
 func initConfigAction(c *cli.Context) {
@@ -40,7 +36,7 @@ func genConfigAction(c *cli.Context) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	generate(c.GlobalString("pkg"), opt, false)
+	generate(c.GlobalString("pkg"), opt)
 }
 
 func scanGenFlags(c *cli.Context) goma.Options {
@@ -51,6 +47,7 @@ func scanGenFlags(c *cli.Context) goma.Options {
 	opt.Host = c.String("host")
 	opt.Port = c.Int("port")
 	opt.DBName = c.String("db")
+	opt.Location = c.String("location")
 	opt.SSLMode = c.String("ssl")
 	opt.SQLRootDir = c.String("sql")
 	opt.DaoRootDir = c.String("dao")
