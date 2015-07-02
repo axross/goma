@@ -40,8 +40,19 @@ func TestNumeric(t *testing.T) {
 		FloatColumns:    float64(1.234),
 	}
 
-	if _, err := d.Insert(insertData); err != nil {
+	if es, err := d.SelectAll(); err != nil {
 		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
+	// 10件登録
+	copyInsertData := insertData
+	for i := 0; i < 10; i++ {
+		copyInsertData.ID = copyInsertData.ID + int64(i * 10000)
+		if _, err := d.Insert(copyInsertData); err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
 	}
 
 	if e, err := d.SelectByID(id); err != nil {
@@ -53,12 +64,30 @@ func TestNumeric(t *testing.T) {
 		}
 	}
 
+	insertData.IntColumns = 111
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
+		}
+	}
+
 	if _, err := d.Delete(id); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
 
 	if _, err := d.SelectByID(id); err != sql.ErrNoRows {
-		t.Errorf("ERROR: %s", "Deleteしたのにnilじゃない")
+		t.Errorf("ERROR: %s %s", "Deleteしたのにnilじゃない", err)
+	}
+
+	// deleteAll custom query
+	if _, err := gomaNumericTypesDeleteAll(d); err != nil {
+		t.Errorf("ERROR: %s", "custom query DeleteAll", err)
 	}
 }
 
@@ -81,6 +110,12 @@ func TestString(t *testing.T) {
 		VarcharColumns: "1234567890abcdefghijkelmnopqrstuvwxyz",
 	}
 
+	if es, err := d.SelectAll(); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
 	if _, err := d.Insert(insertData); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
@@ -89,6 +124,19 @@ func TestString(t *testing.T) {
 		t.Errorf("ERROR: %s", err)
 	} else if !reflect.DeepEqual(e, insertData) {
 		t.Errorf("ERROR: %+v \n!= \n%+v", e, insertData)
+	}
+
+	insertData.TextColumns = "test"
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
+		}
 	}
 
 	if _, err := d.Delete(id); err != nil {
@@ -123,6 +171,12 @@ func TestDate(t *testing.T) {
 		TimestampColumns: timeStampColumnsTime,
 	}
 
+	if es, err := d.SelectAll(); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
 	if _, err := d.Insert(insertData); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
@@ -133,6 +187,20 @@ func TestDate(t *testing.T) {
 		insertData.TimestampColumns = e.TimestampColumns // TODO: postgresでTimezone指定できないため...
 		if !reflect.DeepEqual(e, insertData) {
 			t.Errorf("ERROR: \n%+v \n!= \n%+v", e, insertData)
+		}
+	}
+
+	now := time.Now()
+	insertData.TimestampColumns = now
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
 		}
 	}
 

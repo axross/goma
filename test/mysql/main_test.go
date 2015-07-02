@@ -45,8 +45,19 @@ func TestNumeric(t *testing.T) {
 		DoubleColumns:    float64(1000.234),
 	}
 
-	if _, err := d.Insert(insertData); err != nil {
+	if es, err := d.SelectAll(); err != nil {
 		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
+	// 10件登録
+	copyInsertData := insertData
+	for i := 0; i < 10; i++ {
+		copyInsertData.ID = copyInsertData.ID + int64(i * 10000)
+		if _, err := d.Insert(copyInsertData); err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
 	}
 
 	if e, err := d.SelectByID(id); err != nil {
@@ -54,7 +65,21 @@ func TestNumeric(t *testing.T) {
 	} else {
 		insertData.SerialColumns = e.SerialColumns // TODO: AutoIncrement
 		if !reflect.DeepEqual(e, insertData) {
-			t.Errorf("ERROR: %+v != %+v", e, insertData)
+			t.Errorf("ERROR: \n%+v \n!= \n%+v", e, insertData)
+		}
+	}
+
+	insertData.ID = id
+	insertData.IntColumns = 111111
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
 		}
 	}
 
@@ -63,7 +88,12 @@ func TestNumeric(t *testing.T) {
 	}
 
 	if _, err := d.SelectByID(id); err != sql.ErrNoRows {
-		t.Errorf("ERROR: %s", "Deleteしたのにnilじゃない")
+		t.Errorf("ERROR: %s %s", "Deleteしたのにnilじゃない", err)
+	}
+
+	// deleteAll custom query
+	if _, err := gomaNumericTypesDeleteAll(d); err != nil {
+		t.Errorf("ERROR: %s", "custom query DeleteAll", err)
 	}
 }
 
@@ -90,6 +120,12 @@ func TestString(t *testing.T) {
 		EnumColumns:       entity.EnumColumnsClose,
 	}
 
+	if es, err := d.SelectAll(); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
 	if _, err := d.Insert(insertData); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
@@ -98,6 +134,19 @@ func TestString(t *testing.T) {
 		t.Errorf("ERROR: %s", err)
 	} else if !reflect.DeepEqual(e, insertData) {
 		t.Errorf("ERROR: \n%+v\n%+v", e, insertData)
+	}
+
+	insertData.TextColumns = "hogehoge"
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
+		}
 	}
 
 	if _, err := d.Delete(id); err != nil {
@@ -128,6 +177,12 @@ func TestDate(t *testing.T) {
 		TimestampColumns: time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), 0, now.Location()),
 	}
 
+	if es, err := d.SelectAll(); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
 	if _, err := d.Insert(insertData); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
@@ -135,7 +190,20 @@ func TestDate(t *testing.T) {
 	if e, err := d.SelectByID(id); err != nil {
 		t.Errorf("ERROR: %s", err)
 	} else if !reflect.DeepEqual(e, insertData) {
-		t.Errorf("ERROR: %+v != %+v", e, insertData)
+		t.Errorf("ERROR: \n%+v \n!= \n%+v", e, insertData)
+	}
+
+	insertData.TimestampColumns = time.Now().Add(1 * time.Second)
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
+		}
 	}
 
 	if _, err := d.Delete(id); err != nil {
@@ -169,6 +237,12 @@ func TestBinary(t *testing.T) {
 		VarbinaryColumns:  []uint8{49, 49, 50, 51, 52, 53, 54, 55, 56},
 	}
 
+	if es, err := d.SelectAll(); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else if len(es) != 0 {
+		t.Errorf("ERROR: len %d", len(es))
+	}
+
 	if _, err := d.Insert(insertData); err != nil {
 		t.Errorf("ERROR: %s", err)
 	}
@@ -177,6 +251,19 @@ func TestBinary(t *testing.T) {
 		t.Errorf("ERROR: %s", err)
 	} else if !reflect.DeepEqual(e, insertData) {
 		t.Errorf("ERROR: %+v != %+v", e, insertData)
+	}
+
+	insertData.BinaryColumns = []uint8{50, 50, 50}
+	if result, err := d.Update(insertData); err != nil {
+		t.Errorf("ERROR: %s", err)
+	} else {
+		rows, err := result.RowsAffected()
+		if err != nil {
+			t.Errorf("ERROR: %s", err)
+		}
+		if rows != 1 {
+			t.Errorf("ERROR: update len 1 != %d", rows)
+		}
 	}
 
 	if _, err := d.Delete(id); err != nil {
