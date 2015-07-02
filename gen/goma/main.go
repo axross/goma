@@ -69,6 +69,12 @@ func main() {
 				cli.StringFlag{"path", "config.json", "config path", ""},
 			},
 		},
+		{
+			Name:   "explain",
+			Action: explainAction,
+			Usage:  "explain sql",
+			Flags:  genFlags,
+		},
 	}
 	app.Run(os.Args)
 }

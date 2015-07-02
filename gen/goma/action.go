@@ -6,7 +6,12 @@ import (
 	"log"
 	"os"
 
+	"path/filepath"
+
+	"strings"
+
 	"github.com/codegangsta/cli"
+	"github.com/jmoiron/sqlx"
 	"github.com/kyokomi/goma"
 )
 
@@ -55,4 +60,74 @@ func scanGenFlags(c *cli.Context) goma.Options {
 	opt.IsConfig = c.Bool("config")
 	opt.Debug = c.GlobalBool("debug")
 	return opt
+}
+
+func explainAction(c *cli.Context) {
+	opt := scanGenFlags(c)
+
+	db, err := goma.OpenOptions(opt)
+	if err != nil {
+		log.Fatalf("goma.Open error : %s", err)
+	}
+	defer db.Close()
+
+	infos, err := ioutil.ReadDir(opt.SQLRootDirPath())
+	if err != nil {
+		log.Fatalf("sql dir ReadDir paht = %s error : %s", opt.SQLRootDirPath(), err)
+	}
+
+	// TODO: あとで
+	queryArgs := map[string]interface{}{
+		"id":                int64(111111),
+		"tinyint_columns":   int(8),
+		"bool_columns":      false,
+		"smallint_columns":  int(123),
+		"mediumint_columns": int(256),
+		"int_columns":       int(11111111),
+		"integer_columns":   int(22222222),
+		"decimal_columns":   int64(111111),
+		"numeric_columns":   "1234567890",
+		"float_columns":     "1234567890",
+		"double_columns":    float32(1.234),
+	}
+
+	for _, info := range infos {
+		if !info.IsDir() {
+			continue
+		}
+
+		tableName := info.Name()
+
+		tableDirPath := filepath.Join(opt.SQLRootDirPath(), info.Name())
+		tableFileInfos, err := ioutil.ReadDir(tableDirPath)
+		if err != nil {
+			log.Fatalf("table file ReadDir paht = %s error : %s", tableDirPath, err)
+		}
+
+		for _, fInfo := range tableFileInfos {
+			if fInfo.IsDir() {
+				continue
+			}
+
+			queryName := fInfo.Name()
+
+			sqlFilePath := filepath.Join(tableDirPath, fInfo.Name())
+			sqlFileData, err := ioutil.ReadFile(sqlFilePath)
+			if err != nil {
+				log.Fatalf("sql file ReadFile paht = %s error : %s", sqlFilePath, err)
+			}
+
+			sqlQuery, args, err := sqlx.Named(string(sqlFileData), queryArgs)
+
+			if strings.HasPrefix(queryName, "delete") ||
+				strings.HasPrefix(queryName, "insert") ||
+				strings.HasPrefix(queryName, "update") {
+				continue
+			}
+
+			if err := PrintExplain(db, tableName, queryName, sqlQuery, args...); err != nil {
+				log.Printf("printExplain error %s", err)
+			}
+		}
+	}
 }

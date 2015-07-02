@@ -3,15 +3,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
-
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
+	"log"
 
 	"github.com/mitchellh/colorstring"
-
-
-	log "github.com/Sirupsen/logrus"
 )
+
 type CheckExplain struct {
 	TableName string
 	QueryName string
@@ -36,36 +32,15 @@ type MySQLExplain struct {
  Seq Scan on goma_string_types  (cost=0.00..1.00 rows=1 width=592)
    Filter: (id = 1)
 (2 rows)
- */
-var postgresExplainTemplate = "[red]%s : %s [default]=> %s"
-var mysqlExplainTemplate = "[red]%s : %s [default]=>  %d  %s %s %s %s %s %d %s %d %s "
+*/
+var postgresExplainTemplate = "[red]%s : %s \n\n [default]=> %s"
+var mysqlExplainTemplate = "[red]%s : %s \n\n [default]=>  %d  [yellow]%s [default]%s %s %s %s %d %s %d %s \n"
 
-func main() {
-	// TODO: driverを見て、mysqlとpostgresで分岐
-
-	// TODO: cli引数
-	db, err := sql.Open("mysql", "root:@/goma_test")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer db.Close()
-
-	// TODO: cli引数のsqlディレクトリ下を見る
-	// dir1名: tableName
-	// dir2名: queryName
-	// file内容: query
-	query := "select * from goma_string_types"
-	err = PrintExplain(db, "goma_string_types", "selectAll", query)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
-func PrintExplain(db *sql.DB, tableName, queryName, query string) error {
+func PrintExplain(db *sql.DB, tableName, queryName, query string, args ...interface{}) error {
 	e := CheckExplain{}
 	e.TableName = tableName
 	e.QueryName = queryName
-	row := db.QueryRow(fmt.Sprintf("EXPLAIN %s", query))
+	row := db.QueryRow(fmt.Sprintf("EXPLAIN %s", query), args...)
 	err := row.Scan(
 		&e.ID,
 		&e.SelectType,
@@ -99,4 +74,3 @@ func PrintExplain(db *sql.DB, tableName, queryName, query string) error {
 
 	return nil
 }
-
